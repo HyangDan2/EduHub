@@ -1,0 +1,15 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import fs from 'node:fs/promises';
+import os from 'node:os';
+import path from 'node:path';
+import {filterEntries,readState,sortEntries} from '../js/catalog.js';
+import {loadCatalog,validateCatalog,safeFile} from '../scripts/validate-catalog.mjs';
+import {renderNote} from '../scripts/render.mjs';
+const catalog=await loadCatalog();
+test('Korean body search and AND filters',()=>{const e={...catalog.entries[0],body:'새로운 비동기 개념'};assert.equal(filterEntries([e],{q:'비동기',topic:e.topic,kind:e.kind}).length,1);assert.equal(filterEntries([e],{q:'비동기',topic:'없는 주제',kind:''}).length,0);for(const status of ['draft','archived'])assert.equal(filterEntries([{...e,status}],{q:'',topic:'',kind:''}).length,0);});
+test('Latin search, unknown filters, and dates',()=>{assert.equal(filterEntries([{...catalog.entries[0],body:'HTML'}],{q:'html',topic:'',kind:''}).length,1);assert.equal(readState('?topic=unknown&kind=unknown',catalog.entries).topic,'');const e=catalog.entries[0];assert.equal(sortEntries([{...e,id:'old',studiedAt:'2020-01-01'},{...e,id:'undated',updatedAt:'2026-01-01'}])[0].id,'old');});
+test('reject duplicate IDs, dates, unsafe URLs, and paths',async()=>{for(const mutate of [c=>c.entries.push(c.entries[0]),c=>c.entries[0].updatedAt='2026-02-30',c=>c.entries[0].learningUrl='javascript:alert(1)',c=>c.entries[0].sources=[{label:'x',url:'javascript:alert(1)',type:'original'}],c=>c.entries[0].contentPath='content/notes/../../secret.md',c=>c.entries[0].contentPath='content/notes/missing.md']){const c=structuredClone(catalog);mutate(c);await assert.rejects(()=>validateCatalog(c));}});
+test('shared source URLs remain valid',async()=>{const c=structuredClone(catalog);c.entries.push({...c.entries[0],id:'other-record',status:'draft'});await validateCatalog(c);});
+test('escaping symlinks are rejected',async()=>{const temp=await fs.mkdtemp(path.join(os.tmpdir(),'eduhub-'));try{await fs.mkdir(path.join(temp,'notes'));await fs.writeFile(path.join(temp,'secret'),'secret');await fs.symlink(path.join(temp,'secret'),path.join(temp,'notes/link'));await assert.rejects(()=>safeFile('notes/link','notes',temp));}finally{await fs.rm(temp,{recursive:true});}});
+test('Markdown scripts and unsafe links remain inert',()=>{const {html}=renderNote('<script>alert(1)</script>\n\n[x](javascript:alert(1))\n\n[x](data:text/html,hi)\n\n```html\n<img src=x onerror=alert(1)>\n```');assert.ok(!html.includes('<script>'));assert.ok(!html.includes('href="javascript:'));assert.ok(!html.includes('href="data:'));assert.ok(!html.includes('<img'));assert.ok(html.includes('&lt;img'));});

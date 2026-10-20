@@ -1,0 +1,7 @@
+import fs from 'node:fs/promises';
+import {chromium} from '@playwright/test';
+const base=process.env.PUBLIC_URL;if(!base||!base.startsWith('https://')||!base.endsWith('/EduHub/'))throw Error('No deployment configured. Set PUBLIC_URL to the confirmed HTTPS /EduHub/ URL after authorized deployment.');
+const local=JSON.parse(await fs.readFile('dist/release.json','utf8'));
+const remote=await fetch(base+'release.json',{signal:AbortSignal.timeout(10000)}).then(r=>{if(!r.ok)throw Error(`Release HTTP ${r.status}`);return r.json();});
+if(local.digest!==remote.digest)throw Error('Deployed content differs from local build.');
+const browser=await chromium.launch();try{const page=await browser.newPage();await page.goto(base);await page.locator('.entry-card').first().waitFor();if(await page.locator('.entry-card').count()!==local.count)throw Error('Card count mismatch');await page.locator('.intro-link').first().click();await page.reload();await page.locator('.prose').waitFor();await page.locator('#back-link').click();await page.locator('.entry-card').first().waitFor();await page.locator('#entry-edpilot0001 .entry-link').click();await page.waitForURL('https://hyangdan2.github.io/EDPilot0001/main.html');await page.goto('https://hyangdan2.github.io/EDPilot0001/chapters/01-data-and-models.html');await page.locator('.hub-link').click();await page.waitForURL(base+'#entry-edpilot0001');await page.locator('#entry-edpilot0001').waitFor();console.log('Hosted release, intro, and real course round trip verified.');}finally{await browser.close();}
