@@ -35,3 +35,11 @@ The course's direct Web-HQ return is replaced by EduHub in source and generated 
 Removed all six samples, the draft, their Markdown and onboarding notes, and obsolete sample screenshots. Exactly one course remains: edpilot0001. Browser tests now exercise the actual single-course catalog; contract tests use intercepted responses instead of requiring a sibling checkout in CI. Real public round-trip acceptance is performed after both deployments.
 
 Release verification before initial push: catalog validation passed with one course, all 6 unit and 9 Chromium browser tests passed, and both external destinations returned successful responses. Production build used PUBLIC_URL=https://hyangdan2.github.io/EduHub/. EDPilot0001's previously validated integration is committed as 5d1a144; hosted acceptance remains pending until Actions completes.
+
+## Hosted acceptance — 2026-10-20
+
+- EduHub initial release: a02d25de6381b24416f35ac1fa08f47080d6ef2c, [Actions run](https://github.com/HyangDan2/EduHub/actions/runs/39442637640), build and deploy successful.
+- EDPilot0001: 5d1a144ea9251f5a8aea891663fcd248cac1672f, [Actions run](https://github.com/HyangDan2/EDPilot0001/actions/runs/39442550768), build and deploy successful.
+- `PUBLIC_URL=https://hyangdan2.github.io/EduHub/ npm run verify:hosted` passed against the public release digest. Confirmed intro-page reload, launch to course, direct nested chapter, and return to the Hub card.
+- Exactly one published record and one generated detail page remain. Production artifacts contain no localhost/loopback links. Earlier local-only and sample results above are historical.
+- Physical devices remain untested.
